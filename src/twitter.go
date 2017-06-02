@@ -86,6 +86,7 @@ func iterateTweets(statuses []twitter.Tweet) error {
 				anErr := handleSingleTweet(aTweet)
 				if anErr != nil {
 					log.Println("Error replying to tweet: " + strconv.FormatInt(aTweet.ID, 10))
+					log.Println(anErr)
 					errOccurred = true
 					err <- anErr
 				}
