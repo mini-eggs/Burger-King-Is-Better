@@ -44,6 +44,9 @@ func handleSingleTweet(aTweet twitter.Tweet) error {
 	}
 
 	if !hasRow {
+
+		log.Println("Beginning to reply to tweet " + strconv.FormatInt(aTweet.ID, 10))
+
 		insertErr := insertRow(aTweet.ID)
 		if insertErr != nil {
 			return insertErr
@@ -58,6 +61,11 @@ func handleSingleTweet(aTweet twitter.Tweet) error {
 		}
 
 		log.Println("Replied to tweet: " + strconv.FormatInt(aTweet.ID, 10) + " with `" + tweet + "`")
+
+	} else {
+
+		log.Println("Tweet " + strconv.FormatInt(aTweet.ID, 10) + " has already been replied to")
+
 	}
 
 	return nil
@@ -65,6 +73,8 @@ func handleSingleTweet(aTweet twitter.Tweet) error {
 
 func iterateTweets(statuses []twitter.Tweet) error {
 	var err = make(chan error)
+
+	log.Println("Iterating Tweets with goroutine")
 
 	go func(aTweets []twitter.Tweet) {
 		for _, singleTweet := range aTweets {
@@ -86,7 +96,7 @@ func queryHashtagAndReply(hashtag *string) error {
 	if *hashtag == "false" {
 		return errors.New("No hashtag was set")
 	}
-
+	log.Println("Querying Twitter for hashtag of " + *hashtag)
 	search, _, err := client.Search.Tweets(&twitter.SearchTweetParams{
 		Query: "#" + *hashtag,
 	})
