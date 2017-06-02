@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/dghubble/go-twitter/twitter"
@@ -73,6 +74,9 @@ func handleSingleTweet(aTweet twitter.Tweet) error {
 
 func iterateTweets(statuses []twitter.Tweet) error {
 	var err = make(chan error)
+	errOccurred := false
+	var wg sync.WaitGroup
+	wg.Add(len(statuses))
 
 	log.Println("Iterating Tweets with goroutine")
 
@@ -82,13 +86,23 @@ func iterateTweets(statuses []twitter.Tweet) error {
 				anErr := handleSingleTweet(aTweet)
 				if anErr != nil {
 					log.Println("Error replying to tweet: " + strconv.FormatInt(aTweet.ID, 10))
+					errOccurred = true
 					err <- anErr
 				}
+				wg.Done()
 			}(singleTweet)
 		}
 	}(statuses)
 
-	return <-err
+	go func() {
+		wg.Wait()
+	}()
+
+	if errOccurred {
+		return <-err
+	}
+
+	return nil
 }
 
 func queryHashtagAndReply(hashtag *string) error {
