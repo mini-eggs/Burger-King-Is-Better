@@ -137,7 +137,7 @@ func queryHashtagLoop(hashtag *string, infinite bool) error {
 				return err
 			}
 
-			time.Sleep(time.Minute * 3)
+			time.Sleep(time.Minute * 5)
 		}
 	} else {
 		return queryHashtagAndReply(hashtag)
