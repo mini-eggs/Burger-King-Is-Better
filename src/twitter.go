@@ -96,6 +96,7 @@ func iterateTweets(statuses []twitter.Tweet) error {
 
 	go func() {
 		wg.Wait()
+		close(err)
 	}()
 
 	if errOccurred {
