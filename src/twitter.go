@@ -14,7 +14,6 @@ import (
 
 var (
 	defaultTweetText = "Just saying... Burger King's 10pc. chicken nugget is only $1.49..."
-	fileName         = "replies.json"
 )
 
 type saveIDs struct {
@@ -38,43 +37,45 @@ func createTweet(tweetText *string, params *twitter.StatusUpdateParams) error {
 	return err
 }
 
+func reply(aTweet twitter.Tweet) error {
+	log.Println("Beginning to reply to tweet " + strconv.FormatInt(aTweet.ID, 10))
+
+	insertErr := insertRow(aTweet.ID)
+	if insertErr != nil {
+		return insertErr
+	}
+
+	tweet := "@" + aTweet.User.ScreenName + " " + defaultTweetText
+	createTweetErr := createTweet(&tweet, &twitter.StatusUpdateParams{
+		InReplyToStatusID: aTweet.ID,
+	})
+	if createTweetErr != nil {
+		return createTweetErr
+	}
+
+	log.Println("Replied to tweet: " + strconv.FormatInt(aTweet.ID, 10) + " with `" + tweet + "`")
+
+	return nil
+}
+
 func handleSingleTweet(aTweet twitter.Tweet) error {
 	hasRow, checkErr := hasRow(aTweet.ID)
 	if checkErr != nil {
 		return checkErr
 	}
 
-	if !hasRow {
-
-		log.Println("Beginning to reply to tweet " + strconv.FormatInt(aTweet.ID, 10))
-
-		insertErr := insertRow(aTweet.ID)
-		if insertErr != nil {
-			return insertErr
-		}
-
-		tweet := "@" + aTweet.User.ScreenName + " " + defaultTweetText
-		createTweetErr := createTweet(&tweet, &twitter.StatusUpdateParams{
-			InReplyToStatusID: aTweet.ID,
-		})
-		if createTweetErr != nil {
-			return createTweetErr
-		}
-
-		log.Println("Replied to tweet: " + strconv.FormatInt(aTweet.ID, 10) + " with `" + tweet + "`")
-
-	} else {
-
+	if hasRow {
 		log.Println("Tweet " + strconv.FormatInt(aTweet.ID, 10) + " has already been replied to")
-
+		return nil
 	}
 
-	return nil
+	return reply(aTweet)
 }
 
 func iterateTweets(statuses []twitter.Tweet) error {
 	var err = make(chan error)
 	errOccurred := false
+
 	var wg sync.WaitGroup
 	wg.Add(len(statuses))
 
@@ -95,10 +96,8 @@ func iterateTweets(statuses []twitter.Tweet) error {
 		}
 	}(statuses)
 
-	go func() {
-		wg.Wait()
-		close(err)
-	}()
+	wg.Wait()
+	close(err)
 
 	if errOccurred {
 		return <-err
@@ -112,7 +111,9 @@ func queryHashtagAndReply(hashtag *string) error {
 	if *hashtag == "false" {
 		return errors.New("No hashtag was set")
 	}
+
 	log.Println("Querying Twitter for hashtag of " + *hashtag)
+
 	search, _, err := client.Search.Tweets(&twitter.SearchTweetParams{
 		Query: "#" + *hashtag,
 	})
@@ -139,7 +140,7 @@ func queryHashtagLoop(hashtag *string, infinite bool) error {
 
 			time.Sleep(time.Minute * 5)
 		}
-	} else {
-		return queryHashtagAndReply(hashtag)
 	}
+
+	return queryHashtagAndReply(hashtag)
 }
